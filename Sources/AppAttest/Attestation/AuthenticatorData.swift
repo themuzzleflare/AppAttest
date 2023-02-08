@@ -55,6 +55,7 @@ struct AuthenticatorData: Equatable {
     enum AAGUID: String, CaseIterable {
         case appAttest = "appattest"
         case appAttestDevelop = "appattestdevelop"
+        case appAttestSandbox = "appattestsandbox"
         
         init?(bytes: Data) {
             if let id = AAGUID.allCases.first(where: { bytes == $0.bytes }) {
@@ -68,6 +69,8 @@ struct AuthenticatorData: Equatable {
             let data = rawValue.data(using: .utf8)!
             switch self {
             case .appAttestDevelop:
+                return data
+            case .appAttestSandbox:
                 return data
             case .appAttest:
                 return data + Data(repeatElement(0x00, count: 7))
