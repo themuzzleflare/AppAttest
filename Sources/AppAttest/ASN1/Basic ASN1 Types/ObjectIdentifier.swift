@@ -24,16 +24,16 @@ extension ASN1 {
     /// We mostly don't care about the semantics of the thing, we just care about being able to store and compare them.
     struct ASN1ObjectIdentifier: ASN1Parseable, ASN1Serializable {
         private var oidComponents: [UInt]
-
+        
         init(asn1Encoded node: ASN1.ASN1Node) throws {
             guard node.identifier == .objectIdentifier else {
                 throw CryptoKitASN1Error.unexpectedFieldType
             }
-
+            
             guard case .primitive(var content) = node.content else {
                 preconditionFailure("ASN.1 parser generated primitive node with constructed content")
             }
-
+            
             // We have to parse the content. From the spec:
             //
             // > Each subidentifier is represented as a series of (one or more) octets. Bit 8 of each octet indicates whether it
@@ -59,16 +59,16 @@ extension ASN1 {
             while content.count > 0 {
                 subcomponents.append(try content.readOIDSubidentifier())
             }
-
+            
             guard subcomponents.count >= 2 else {
                 throw CryptoKitASN1Error.invalidObjectIdentifier
             }
-
+            
             // Now we need to expand the subcomponents out. This means we need to undo the step above. The first component will be in the range 0..<40
             // when the first oidComponent is 0, 40..<80 when the first oidComponent is 1, and 80+ when the first oidComponent is 2.
             var oidComponents = [UInt]()
             oidComponents.reserveCapacity(subcomponents.count + 1)
-
+            
             switch subcomponents.first! {
             case ..<40:
                 oidComponents.append(0)
@@ -80,46 +80,46 @@ extension ASN1 {
                 oidComponents.append(2)
                 oidComponents.append(subcomponents.first! - 80)
             }
-
+            
             oidComponents.append(contentsOf: subcomponents.dropFirst())
-
+            
             self.oidComponents = oidComponents
         }
-
+        
         func serialize(into coder: inout ASN1.Serializer) throws {
             coder.appendPrimitiveNode(identifier: .objectIdentifier) { bytes in
                 var components = self.oidComponents[...]
                 guard let firstComponent = components.popFirst(), let secondComponent = components.popFirst() else {
                     preconditionFailure("Invalid number of OID components: must be at least two!")
                 }
-
+                
                 let serializedFirstComponent = (firstComponent * 40) + secondComponent
                 ASN1ObjectIdentifier.writeOIDSubidentifier(serializedFirstComponent, into: &bytes)
-
+                
                 while let component = components.popFirst() {
                     ASN1ObjectIdentifier.writeOIDSubidentifier(component, into: &bytes)
                 }
             }
         }
-
+        
         private static func writeOIDSubidentifier(_ identifier: UInt, into array: inout [UInt8]) {
             // An OID subidentifier is written as an integer over 7-bit bytes, where the last byte has the top bit unset.
             // The first thing we need is to know how many bits we need to write
             let bitsToWrite = UInt.bitWidth - identifier.leadingZeroBitCount
             let bytesToWrite = (bitsToWrite + 6) / 7
-
+            
             guard bytesToWrite > 0 else {
                 // Just a zero.
                 array.append(0)
                 return
             }
-
+            
             for byteNumber in (1..<bytesToWrite).reversed() {
                 let shift = byteNumber * 7
                 let byte = UInt8((identifier >> shift) & 0x7f) | 0x80
                 array.append(byte)
             }
-
+            
             // Last byte to append here, we must unset the top bit.
             let byte = UInt8((identifier & 0x7F))
             array.append(byte)
@@ -138,12 +138,12 @@ extension ASN1.ASN1ObjectIdentifier: ExpressibleByArrayLiteral {
 extension ASN1.ASN1ObjectIdentifier {
     enum NamedCurves {
         static let secp256r1: ASN1.ASN1ObjectIdentifier = [1, 2, 840, 10_045, 3, 1, 7]
-
+        
         static let secp384r1: ASN1.ASN1ObjectIdentifier = [1, 3, 132, 0, 34]
-
+        
         static let secp521r1: ASN1.ASN1ObjectIdentifier = [1, 3, 132, 0, 35]
     }
-
+    
     enum AlgorithmIdentifier {
         static let idEcPublicKey: ASN1.ASN1ObjectIdentifier = [1, 2, 840, 10_045, 2, 1]
     }
@@ -156,10 +156,10 @@ extension ArraySlice where Element == UInt8 {
         guard let subidentifierEndIndex = self.firstIndex(where: { $0 & 0x80 == 0x00 }) else {
             throw CryptoKitASN1Error.invalidASN1Object
         }
-
+        
         let oidSlice = self[self.startIndex ... subidentifierEndIndex]
         self = self[self.index(after: subidentifierEndIndex)...]
-
+        
         // We need to compact the bits. These are 7-bit integers, which is really awkward.
         return try UInt(sevenBitBigEndianBytes: oidSlice)
     }
@@ -171,10 +171,10 @@ extension UInt {
         guard ((bytes.count * 7) + 7) / 8 <= MemoryLayout<UInt>.size else {
             throw CryptoKitASN1Error.invalidASN1Object
         }
-
+        
         self = 0
         let shiftSizes = stride(from: 0, to: bytes.count * 7, by: 7).reversed()
-
+        
         var index = bytes.startIndex
         for shift in shiftSizes {
             self |= UInt(bytes[index] & 0x7F) << shift

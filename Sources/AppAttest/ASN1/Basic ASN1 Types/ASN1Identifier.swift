@@ -23,24 +23,24 @@ extension ASN1 {
         /// The base tag. In a general ASN.1 implementation we'd need an arbitrary precision integer here as the tag number can be arbitrarily large, but
         /// we don't need the full generality here.
         private(set) var baseTag: UInt8
-
+        
         /// Whether this tag is primitive.
         var primitive: Bool {
             return self.baseTag & 0x20 == 0
         }
-
+        
         /// Whether this tag is constructed.
         var constructed: Bool {
             return !self.primitive
         }
-
+        
         enum TagClass {
             case universal
             case application
             case contextSpecific
             case `private`
         }
-
+        
         /// The class of this tag.
         var tagClass: TagClass {
             switch self.baseTag >> 6 {
@@ -56,22 +56,22 @@ extension ASN1 {
                 fatalError("Unreachable")
             }
         }
-
+        
         init(rawIdentifier: UInt8) throws {
             // We don't support multibyte identifiers, which are signalled when the bottom 5 bits are all 1.
             guard rawIdentifier & 0x1F != 0x1F else {
                 throw CryptoKitASN1Error.invalidFieldIdentifier
             }
-
+            
             self.baseTag = rawIdentifier
         }
-
+        
         init(explicitTagWithNumber number: Int, tagClass: TagClass) {
             precondition(number >= 0)
             precondition(number < 0x1F)
-
+            
             self.baseTag = UInt8(number)
-
+            
             switch tagClass {
             case .universal:
                 preconditionFailure("Explicit tags may not be universal")
@@ -82,7 +82,7 @@ extension ASN1 {
             case .private:
                 self.baseTag |= 3 << 6
             }
-
+            
             // Explicit tags are always constructed.
             self.baseTag |= 0x20
         }

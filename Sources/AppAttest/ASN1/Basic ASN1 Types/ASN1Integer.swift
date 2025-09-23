@@ -24,13 +24,13 @@ import Foundation
 /// protocol exists today.
 protocol ASN1IntegerRepresentable: ASN1Parseable, ASN1Serializable {
     associatedtype IntegerBytes: RandomAccessCollection where IntegerBytes.Element == UInt8
-
+    
     /// Whether this type can represent signed integers. If this is set to false, the serializer and
     /// parser will automatically handle padding with leading zero bytes as needed.
     static var isSigned: Bool { get }
-
+    
     init(asn1IntegerBytes: ArraySlice<UInt8>) throws
-
+    
     func withBigEndianIntegerBytes<ReturnType>(_ body: (IntegerBytes) throws -> ReturnType) rethrows -> ReturnType
 }
 
@@ -39,16 +39,16 @@ extension ASN1IntegerRepresentable {
         guard node.identifier == .integer else {
             throw CryptoKitASN1Error.unexpectedFieldType
         }
-
+        
         guard case .primitive(var dataBytes) = node.content else {
             preconditionFailure("ASN.1 parser generated primitive node with constructed content")
         }
-
+        
         // Zero bytes of integer is not an acceptable encoding.
         guard dataBytes.count > 0 else {
             throw CryptoKitASN1Error.invalidASN1IntegerEncoding
         }
-
+        
         // 8.3.2 If the contents octets of an integer value encoding consist of more than one octet, then the bits of the first octet and bit 8 of the second octet:
         //
         // a) shall not all be ones; and
@@ -61,7 +61,7 @@ extension ASN1IntegerRepresentable {
                 throw CryptoKitASN1Error.invalidASN1IntegerEncoding
             }
         }
-
+        
         // If the type we're trying to decode is unsigned, and the top byte is zero, we should strip it.
         // If the top bit is set, however, this is an invalid conversion: the number needs to be positive!
         if !Self.isSigned, let first = dataBytes.first {
@@ -71,10 +71,10 @@ extension ASN1IntegerRepresentable {
                 throw CryptoKitASN1Error.invalidASN1IntegerEncoding
             }
         }
-
+        
         self = try Self(asn1IntegerBytes: dataBytes)
     }
-
+    
     internal func serialize(into coder: inout ASN1.Serializer) throws {
         coder.appendPrimitiveNode(identifier: .integer) { bytes in
             self.withBigEndianIntegerBytes { integerBytes in
@@ -83,7 +83,7 @@ extension ASN1IntegerRepresentable {
                     bytes.append(0)
                     return
                 }
-
+                
                 // If self is unsigned and the first byte has the top bit set, we need to prepend a 0 byte.
                 if !Self.isSigned, let topByte = integerBytes.first, topByte.topBitSet {
                     bytes.append(0)
@@ -105,14 +105,14 @@ extension ASN1IntegerRepresentable where Self: FixedWidthInteger {
         // then we need to 1-extend the bytes. This is because ASN.1 tries to delete redundant bytes that
         // are all 1.
         self = try Self(bigEndianBytes: bytes)
-
+        
         if Self.isSigned, let first = bytes.first, first.topBitSet {
             for shift in stride(from: self.bitWidth - self.leadingZeroBitCount, to: self.bitWidth, by: 8) {
                 self |= 0xFF << shift
             }
         }
     }
-
+    
     func withBigEndianIntegerBytes<ReturnType>(_ body: (IntegerBytesCollection<Self>) throws -> ReturnType) rethrows -> ReturnType {
         return try body(IntegerBytesCollection(self))
     }
@@ -120,7 +120,7 @@ extension ASN1IntegerRepresentable where Self: FixedWidthInteger {
 
 struct IntegerBytesCollection<Integer: FixedWidthInteger> {
     private var integer: Integer
-
+    
     init(_ integer: Integer) {
         self.integer = integer
     }
@@ -129,29 +129,29 @@ struct IntegerBytesCollection<Integer: FixedWidthInteger> {
 extension IntegerBytesCollection: RandomAccessCollection {
     struct Index {
         fileprivate var byteNumber: Int
-
+        
         fileprivate init(byteNumber: Int) {
             self.byteNumber = byteNumber
         }
-
+        
         fileprivate var shift: Integer {
             // As byte number 0 is the end index, the byte number is one byte too large for the shift.
             return Integer((self.byteNumber - 1) * 8)
         }
     }
-
+    
     var startIndex: Index {
         return Index(byteNumber: Int(self.integer.neededBytes))
     }
-
+    
     var endIndex: Index {
         return Index(byteNumber: 0)
     }
-
+    
     var count: Int {
         return Int(self.integer.neededBytes)
     }
-
+    
     subscript(index: Index) -> UInt8 {
         // We perform the bitwise operations in magnitude space.
         let shifted = Integer.Magnitude(truncatingIfNeeded: self.integer) >> index.shift
@@ -167,15 +167,15 @@ extension IntegerBytesCollection.Index: Comparable {
     static func <(lhs: Self, rhs: Self) -> Bool {
         return lhs.byteNumber > rhs.byteNumber
     }
-
+    
     static func >(lhs: Self, rhs: Self) -> Bool {
         return lhs.byteNumber < rhs.byteNumber
     }
-
+    
     static func <=(lhs: Self, rhs: Self) -> Bool {
         return lhs.byteNumber >= rhs.byteNumber
     }
-
+    
     static func >=(lhs: Self, rhs: Self) -> Bool {
         return lhs.byteNumber <= rhs.byteNumber
     }
@@ -185,7 +185,7 @@ extension IntegerBytesCollection.Index: Strideable {
     func advanced(by n: Int) -> IntegerBytesCollection<Integer>.Index {
         return IntegerBytesCollection.Index(byteNumber: self.byteNumber - n)
     }
-
+    
     func distance(to other: IntegerBytesCollection<Integer>.Index) -> Int {
         // Remember that early indices have high byte numbers and later indices have low ones.
         return self.byteNumber - other.byteNumber
@@ -219,9 +219,9 @@ extension RandomAccessCollection where Element == UInt8 {
             // Easy case, empty.
             return slice
         }
-
+        
         let wholeByte: UInt8
-
+        
         switch first {
         case 0:
             wholeByte = 0
@@ -231,7 +231,7 @@ extension RandomAccessCollection where Element == UInt8 {
             // We're already fine, this is maximally compact. We need the whole thing.
             return slice
         }
-
+        
         // We never trim this to less than one byte, as that's always the smallest representation.
         while slice.count > 1 {
             // If the first byte is equal to our original first byte, and the top bit
@@ -240,21 +240,21 @@ extension RandomAccessCollection where Element == UInt8 {
             if slice.first != wholeByte {
                 break
             }
-
+            
             guard let second = slice.dropFirst().first else {
                 preconditionFailure("Loop condition violated: must be at least two bytes left")
             }
-
+            
             if second & 0x80 != wholeByte & 0x80 {
                 // Different top bit, we need the leading byte.
                 break
             }
-
+            
             // Both the first byte and the top bit of the next are all zero or all 1, drop the leading
             // byte.
             slice = slice.dropFirst()
         }
-
+        
         return slice
     }
 }

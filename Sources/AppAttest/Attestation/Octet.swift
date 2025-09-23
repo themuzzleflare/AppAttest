@@ -1,6 +1,6 @@
 //
 //  Octet.swift
-//  
+//
 //
 //  Created by Ian Sampson on 2020-12-18.
 //
@@ -12,14 +12,14 @@ extension Attestation {
         case failedToExtractValueFromASN1Node(oid: String)
         case expectedOctetStringInsideASN1Node(oid: String)
     }
-    
+
     func extractOctet() throws -> [UInt8] {
         let certificate = statement.certificates[0]
         let octetNodeOIDString = "1.2.840.113635.100.8.2"
         // TOOD: Extend ASN1.ASN1ObjectIdentifier with .string or .description
         let octetNodeOID = ASN1.ASN1ObjectIdentifier(arrayLiteral: 1, 2, 840, 113635, 100, 8, 2)
         let rootNode = try ASN1.parse(certificate.bytes)
-        
+
         // Obtain the value of the credCert extension with OID 1.2.840.113635.100.8.2,
         // which is a DER-encoded ASN.1 sequence.
         let extensionBytes = try rootNode.flatten
@@ -37,7 +37,7 @@ extension Attestation {
             }
             .first
             .tryUnwrap(ParseError.failedToExtractValueFromASN1Node(oid: octetNodeOIDString))
-        
+
         // Decode the sequence and extract the single octet string that it contains.
         return try ASN1.parse(extensionBytes)
             .flatten

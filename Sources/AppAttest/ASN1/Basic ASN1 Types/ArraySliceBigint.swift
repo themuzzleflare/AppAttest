@@ -25,11 +25,11 @@ extension ArraySlice: ASN1IntegerRepresentable where Element == UInt8 {
     static var isSigned: Bool {
         return false
     }
-
+    
     init(asn1IntegerBytes: ArraySlice<UInt8>) throws {
         self = asn1IntegerBytes
     }
-
+    
     func withBigEndianIntegerBytes<ReturnType>(_ body: (ArraySlice<UInt8>) throws -> ReturnType) rethrows -> ReturnType {
         return try body(self)
     }

@@ -20,29 +20,29 @@ extension ASN1 {
     /// A bitstring is a representation of...well...some bits.
     struct ASN1BitString: ASN1Parseable, ASN1Serializable {
         var bytes: ArraySlice<UInt8>
-
+        
         init(asn1Encoded node: ASN1.ASN1Node) throws {
             guard node.identifier == .primitiveBitString else {
                 throw CryptoKitASN1Error.unexpectedFieldType
             }
-
+            
             guard case .primitive(let content) = node.content else {
                 preconditionFailure("ASN.1 parser generated primitive node with constructed content")
             }
-
+            
             // The initial octet explains how many of the bits in the _final_ octet are not part of the bitstring.
             // The only value we support here is 0.
             guard content.first == 0 else {
                 throw CryptoKitASN1Error.invalidASN1Object
             }
-
+            
             self.bytes = content.dropFirst()
         }
-
+        
         init(bytes: ArraySlice<UInt8>) {
             self.bytes = bytes
         }
-
+        
         func serialize(into coder: inout ASN1.Serializer) throws {
             coder.appendPrimitiveNode(identifier: .primitiveBitString) { bytes in
                 bytes.append(0)

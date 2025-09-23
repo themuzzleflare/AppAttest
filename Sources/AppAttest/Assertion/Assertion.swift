@@ -88,7 +88,7 @@ extension Assertion {
         guard authenticatorData.rpID == Data(appIDHash) else {
             throw ValidationError.invalidAppID
         }
-
+        
         // 5. Verify that the authenticator data’s counter value is greater
         // than the value from the previous assertion, or greater than 0
         // on the first assertion.
@@ -101,7 +101,7 @@ extension Assertion {
                 throw ValidationError.invalidCounter
             }
         }
-
+        
         // 6. Verify that the challenge embedded in the client data matches
         // the earlier challenge to the client.
         guard receivedChallenge == storedChallenge else {

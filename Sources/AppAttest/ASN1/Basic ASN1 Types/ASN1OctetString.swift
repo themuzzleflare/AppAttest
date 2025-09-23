@@ -20,23 +20,23 @@ extension ASN1 {
     /// An octet string is a representation of a string of octets.
     struct ASN1OctetString: ASN1Parseable, ASN1Serializable {
         var bytes: ArraySlice<UInt8>
-
+        
         init(asn1Encoded node: ASN1.ASN1Node) throws {
             guard node.identifier == .primitiveOctetString else {
                 throw CryptoKitASN1Error.unexpectedFieldType
             }
-
+            
             guard case .primitive(let content) = node.content else {
                 preconditionFailure("ASN.1 parser generated primitive node with constructed content")
             }
-
+            
             self.bytes = content
         }
-
+        
         init(contentBytes: ArraySlice<UInt8>) {
             self.bytes = contentBytes
         }
-
+        
         func serialize(into coder: inout ASN1.Serializer) throws {
             coder.appendPrimitiveNode(identifier: .primitiveOctetString) { bytes in
                 bytes.append(contentsOf: self.bytes)
