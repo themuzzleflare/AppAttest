@@ -61,7 +61,7 @@ final class AppAttestTests: XCTestCase {
         }
     }
 
-    static var allTests = [
+    static let allTests = [
         ("testAttestation", testAttestation),
         ("testAssertion", testAssertion)
     ]
