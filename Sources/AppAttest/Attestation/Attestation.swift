@@ -39,7 +39,6 @@ struct Attestation: Equatable {
 
 
 // MARK: - CBOR
-
 extension Attestation {
     fileprivate struct CodableCBOR: Codable {
         let format: String

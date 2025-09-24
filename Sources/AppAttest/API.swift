@@ -108,7 +108,6 @@ extension AppAttest {
 
 
 // MARK: - Assertion
-
 extension AppAttest {
     /// A request to verify an assertion and its associated client data.
     ///
@@ -144,7 +143,7 @@ extension AppAttest {
     /// The `verifyAssertion` function returns this result
     /// when assertion succeeds. Store the result on your server
     /// for subsequent calls to `verifyAssertion`.
-    public struct AssertionResult {
+    public struct AssertionResult: @unchecked Sendable {
         /// A value that reports the number of times your app has used the attested key to sign an assertion.
         /// The `verifyAssertion` function extracts this value from the authenticator data
         /// contained in the assertion object and ensures that it is greater than the previous counter.
